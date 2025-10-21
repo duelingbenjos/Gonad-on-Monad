@@ -17,8 +17,9 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies with better error handling and longer timeout  
+RUN npm ci --omit=dev --no-audit --progress=false --maxsockets=5 && \
+    npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder

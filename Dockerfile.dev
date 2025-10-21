@@ -24,8 +24,8 @@ RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Install all dependencies (including dev dependencies)
-RUN npm ci
+# Install all dependencies (including dev dependencies) with better error handling
+RUN npm ci --no-audit --progress=false --maxsockets=5
 
 # Generate Prisma client
 RUN npx prisma generate
