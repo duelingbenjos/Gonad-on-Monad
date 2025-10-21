@@ -1,11 +1,14 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap } from "lucide-react";
 import { WhitelistDialog } from "./WhitelistDialog";
 import { GonadStarfield } from "./GonadStarfield";
+import { SocialIcons } from "./SocialIcons";
 
 export const Hero = () => {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-32">
       {/* Starfield background */}
       <GonadStarfield />
       
@@ -45,18 +48,36 @@ export const Hero = () => {
             
             <div className="max-w-2xl mx-auto space-y-4">
               <p className="text-xl md:text-3xl text-muted-foreground">
-                Q4 2025, Gooch Island continues its infinite expansion on Monad.
+                Q4 2025, CryptoDickButts continue the infinite expansion of Gooch Island to Monad.
               </p>
               
-              <p className="text-base md:text-lg font-medium text-foreground">
-                One chain. Two balls. Infinite goo.
-              </p>
+              <div className="flex items-center justify-center gap-3 mt-6 pt-4 border-t border-border/20">
+                <a 
+                  href="https://magiceden.io" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <img 
+                    src="/ME_Full_Hor_2C_Pos.png" 
+                    alt="Magic Eden" 
+                    className="h-10 opacity-80 hover:opacity-100 transition-opacity"
+                  />
+                </a>
+              </div>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4 justify-center">
-            <WhitelistDialog triggerVariant="hero" triggerText="Join whitelist" />
-            <WhitelistDialog triggerVariant="outline" triggerText="Check status" />
+            <WhitelistDialog triggerVariant="hero" triggerText="Get Whitelist" />
+          </div>
+
+          {/* Connect with us section */}
+          <div className="mt-16 pt-8 border-t border-border/20">
+            <h3 className="text-2xl font-semibold text-foreground mb-6">
+              Connect with us
+            </h3>
+            <SocialIcons className="justify-center" />
           </div>
 
         </div>

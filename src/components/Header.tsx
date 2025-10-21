@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { WhitelistDialog } from "./WhitelistDialog";
 
@@ -11,7 +13,7 @@ export const Header = () => {
         </div>
         
 
-        <WhitelistDialog triggerVariant="hero" triggerText="Join Whitelist" />
+        <WhitelistDialog triggerVariant="hero" triggerText="Get Whitelist" />
       </nav>
     </header>
   );

@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+"use client";
+
+import React, { useEffect, useRef } from 'react';
 
 interface Particle {
   x: number;

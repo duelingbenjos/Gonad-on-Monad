@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  gonad-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gonad-nft-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./data/production.db
+      - NEXT_PUBLIC_WC_PROJECT_ID=${NEXT_PUBLIC_WC_PROJECT_ID:-gonad-demo-project-id}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret-change-this-too}
+    volumes:
+      # Database volume - persist SQLite database on host
+      - ./data:/app/data
+      # Build artifacts volume - access build from host
+      - ./.next:/app/.next
+      # Optional: Mount entire app for development
+      # - .:/app
+      # - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development service (optional) - for development with hot reload
+  gonad-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: gonad-nft-dev
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./data/dev.db
+      - NEXT_PUBLIC_WC_PROJECT_ID=${NEXT_PUBLIC_WC_PROJECT_ID:-gonad-demo-project-id}
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3001}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret}
+    volumes:
+      # Mount entire source code for development
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    profiles:
+      - dev
+    command: npm run dev
+
+volumes:
+  # Named volume for database persistence
+  gonad_data:
+    driver: local

@@ -119,8 +119,17 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: "Medodica", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  }
+
   body {
-    @apply bg-background text-foreground font-medodica;
+    @apply bg-background text-foreground;
+    font-family: "Medodica", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  }
+
+  /* Ensure all text elements use Medodica by default */
+  h1, h2, h3, h4, h5, h6, p, button, input, textarea, select, label, span, div, a {
     font-family: "Medodica", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   }
 }
@@ -146,4 +155,9 @@ All colors MUST be HSL.
   .animate-button-bounce {
     animation: button-bounce 0.6s ease-in-out;
   }
+}
+
+/* RainbowKit modal z-index fix */
+[data-rk] {
+  z-index: 9999 !important;
 }
