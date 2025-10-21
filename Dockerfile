@@ -18,7 +18,7 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
 # Install dependencies with better error handling and longer timeout  
-RUN npm ci --omit=dev --no-audit --progress=false --maxsockets=5 && \
+RUN npm ci --no-audit --progress=false --maxsockets=5 && \
     npm cache clean --force
 
 # Rebuild the source code only when needed
