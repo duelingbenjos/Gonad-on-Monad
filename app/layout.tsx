@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../src/index.css";
 
 export const metadata: Metadata = {
-  title: "Gonad - Yellow Riff",
-  description: "Gonad Yellow Riff Project",
+  title: "Gonad on Monad",
+  description: "Gonad on Monad",
   icons: {
     icon: "/favicon.ico",
   },

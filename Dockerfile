@@ -3,7 +3,14 @@ FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Install build dependencies for native modules
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl
 WORKDIR /app
 
 # Copy package files
@@ -15,6 +22,11 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
+# Install build dependencies for potential rebuild during build
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

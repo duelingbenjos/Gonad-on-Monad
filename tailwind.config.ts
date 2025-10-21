@@ -67,6 +67,14 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      width: {
+        '90': '22.5rem', // 360px
+        '120': '30rem',  // 480px (existing)
+      },
+      height: {
+        '90': '22.5rem', // 360px
+        '120': '30rem',  // 480px (existing)
+      },
       keyframes: {
         "accordion-down": {
           from: {
