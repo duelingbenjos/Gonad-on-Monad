@@ -78,8 +78,6 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
   const hitTextsRef = useRef<HitText[]>([]);
   const victoryTextsRef = useRef<VictoryText[]>([]);
   const animationIdRef = useRef<number>();
-  const explosionMode = useRef(false);
-  const explosionEndTime = useRef(0);
   const explosionSounds = useRef<HTMLAudioElement[]>([]);
   const hasLasersFired = useRef(false);
   const gameState = useRef<GameState>({
@@ -133,37 +131,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     'dickbutt-1eb465d0-clear.png',
   ];
 
-  // Define explosion functions outside useEffect so they're accessible
-  const createExplosionParticles = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !gonadImageRef.current || imagesRef.current.length === 0) return;
-    
-    // Don't clear particles immediately - let lasers target existing ones first
-    // Clear will happen after laser targeting is done
-    
-    // Create GONAD logos (fewer, bigger)
-    const newParticles: Particle[] = [];
-    for (let i = 0; i < 75; i++) {
-      const angle = (Math.PI * 2 * i) / 75 + Math.random() * 0.5;
-      
-      const particle: Particle = {
-        x: Math.cos(angle) * (Math.random() * 50), // Start near center
-        y: Math.sin(angle) * (Math.random() * 50),
-        z: 100 + Math.random() * 200,
-        image: gonadImageRef.current,
-        speed: (Math.random() * 8 + 4),
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.1,
-        size: Math.random() * 80 + 40,
-        opacity: 1,
-      };
-      
-      newParticles.push(particle);
-    }
-
-    // Add new particles to existing ones instead of replacing
-    particlesRef.current.push(...newParticles);
-  };
+  // Explosion particles function removed to eliminate lag
 
   const createLasers = () => {
     const canvas = canvasRef.current;
@@ -174,11 +142,10 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2 - 150; // 15% higher than before (was -100, now -150)
     
-    // Get all available dickbutt particles (non-GONAD particles) from NORMAL starfield
+    // Get all available dickbutt particles (non-GONAD particles) from starfield
     const dickbutts = particlesRef.current.filter(p => 
       p.image !== gonadImageRef.current && 
-      !p.size && // Filter out explosion particles
-      p.z > 1 // Only target particles that are visible in normal starfield
+      p.z > 1 // Only target particles that are visible in starfield
     );
     
     const colors = ['#FF0040', '#00FF40', '#4000FF', '#FF4000', '#40FF00', '#FF0080', '#80FF00', '#0080FF'];
@@ -262,7 +229,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2 - 200; // Higher on screen (was -150, now -200)
-    const textCount = 20; // More texts (was 12, now 20)
+    const textCount = 10; // Reduced to 10 texts
     
     for (let i = 0; i < textCount; i++) {
       const angle = (Math.PI * 2 * i) / textCount + Math.random() * 0.3;
@@ -273,15 +240,15 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         y: centerY,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 300, // Much longer life (was 120, now 300 = 5 seconds)
-        maxLife: 300,
+        life: 500, // Much longer life (was 120, now 300 = 5 seconds)
+        maxLife: 500,
         size: 50 + Math.random() * 30 // Much bigger (was 30+20, now 50+30)
       };
       
       victoryTextsRef.current.push(victoryText);
     }
     
-    // Respawn dickbutts after a longer delay
+    // Respawn dickbutts after victory display + 5 seconds
     setTimeout(() => {
       // Reset victory state
       gameState.current.showClearMessage = false;
@@ -289,11 +256,11 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
       hasLasersFired.current = false;
       
       // Add some new dickbutts
-      const newDickbuttCount = 15 + Math.random() * 10;
+      const newDickbuttCount = 30 + Math.random() * 20; // Increased from 15+10 to 30+20
       for (let i = 0; i < newDickbuttCount; i++) {
         createParticle();
       }
-    }, 4000); // Longer delay (was 2000, now 4000)
+    }, 10000); // 5 seconds after victory texts finish (victory texts last 5 seconds, so 10s total)
   };
 
   // Create a single particle
@@ -316,7 +283,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
 
   // Initialize particles
   const initParticles = () => {
-    const particleCount = 50;
+    const particleCount = 100; // Increased from 50 to 100 for more dickbutts
     particlesRef.current = [];
 
     for (let i = 0; i < particleCount; i++) {
@@ -354,13 +321,8 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
       // Play random explosion sound immediately
       playRandomExplosionSound();
       
-      // Don't immediately enter explosion mode - just fire lasers first
+      // Just fire lasers - no heavy explosion effects
       createLasers();
-      
-      // Add some GONAD logos after a short delay
-      setTimeout(() => {
-        createExplosionParticles();
-      }, 200);
     }
   }));
 
@@ -412,7 +374,6 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     // Animation loop
     const animate = () => {
       const now = Date.now();
-      const isExploding = explosionMode.current && now < explosionEndTime.current;
       
       // Simple clear (no heavy flashing)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -422,40 +383,16 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         hasLasersFired.current = false;
       }
 
-      // Reset to normal mode after explosion
-      if (explosionMode.current && now >= explosionEndTime.current) {
-        explosionMode.current = false;
-        lasersRef.current = [];
-        fragmentsRef.current = [];
-        hasLasersFired.current = false;
-        initParticles(); // Reset to normal particles
-      }
-
-      // Update and draw particles
+      // Update and draw particles (simplified - no explosion particles)
       for (let i = particlesRef.current.length - 1; i >= 0; i--) {
         const particle = particlesRef.current[i];
 
-        // Check if this is an explosion particle (has custom size) or normal starfield
-        if (particle.size && particle.opacity !== undefined) {
-          // Explosion particle physics - fly outward
-          particle.x += Math.cos(Math.atan2(particle.y, particle.x)) * particle.speed;
-          particle.y += Math.sin(Math.atan2(particle.y, particle.x)) * particle.speed;
-          particle.z += particle.speed * 0.5;
-          particle.rotation += particle.rotationSpeed;
-          
-          // Fade out over time
-          particle.opacity -= 0.02;
-          if (particle.opacity <= 0) {
-            particlesRef.current.splice(i, 1);
-            continue;
-          }
-        } else {
-          // Normal starfield physics
-          particle.z -= particle.speed;
-          particle.rotation += particle.rotationSpeed;
+        // Normal starfield physics only
+        particle.z -= particle.speed;
+        particle.rotation += particle.rotationSpeed;
 
-          // Reset particle if it gets too close
-          if (particle.z <= 1) {
+        // Reset particle if it gets too close
+        if (particle.z <= 1) {
             particlesRef.current.splice(i, 1);
             createParticle();
             // Reset clear message since new targets are available
@@ -464,24 +401,13 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
             }
             continue;
           }
-        }
 
-        let screenX, screenY, size, opacity;
-
-        if (particle.size && particle.opacity !== undefined) {
-          // Explosion particle positioning
-          screenX = canvas.width / 2 + particle.x;
-          screenY = canvas.height / 2 - 100 + particle.y;
-          size = particle.size;
-          opacity = particle.opacity;
-        } else {
-          // Normal starfield positioning
-          const scale = (1000 - particle.z) / 1000;
-          screenX = (particle.x / particle.z) * 300 + canvas.width / 2;
-          screenY = (particle.y / particle.z) * 300 + canvas.height / 2 - 250;
-          size = Math.max(scale * 120, 8);
-          opacity = Math.min(scale * 2, 0.8);
-        }
+        // Calculate position and size (normal starfield only)
+        const scale = (1000 - particle.z) / 1000;
+        const screenX = (particle.x / particle.z) * 300 + canvas.width / 2;
+        const screenY = (particle.y / particle.z) * 300 + canvas.height / 2 - 250;
+        const size = Math.max(scale * 120, 8);
+        const opacity = Math.min(scale * 2, 0.8);
 
         // Skip if particle is off-screen
         if (screenX < -200 || screenX > canvas.width + 200 || 
@@ -614,7 +540,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         // Update hit text physics
         hitText.x += hitText.vx;
         hitText.y += hitText.vy;
-        hitText.vy += 0.025; // Ultra light gravity (was 0.05, now 0.025)
+        hitText.vy += 0; // Ultra light gravity (was 0.05, now 0.025)
         hitText.life--;
         hitText.flashPhase++;
         
@@ -657,10 +583,10 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
       for (let i = victoryTextsRef.current.length - 1; i >= 0; i--) {
         const victoryText = victoryTextsRef.current[i];
         
-        // Update victory text physics
+        // Update victory text physics - no gravity, just fly outward
         victoryText.x += victoryText.vx;
         victoryText.y += victoryText.vy;
-        victoryText.vy += 0.01; // Extremely light gravity (was 0.02, now 0.01)
+        // Removed gravity - texts now fly in straight lines
         victoryText.life--;
         
         if (victoryText.life <= 0) {

@@ -33,8 +33,8 @@ export const Hero = () => {
       {/* Black flash overlay */}
       <div className={`absolute inset-0 pointer-events-none z-50 ${isExploding ? 'animate-black-flash' : ''}`} />
       
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent/20 via-background to-background" />
+      {/* Background vignette - custom masking effect */}
+      <div className="vignette vignette-top vignette-subtle" />
       
       <div className="container mx-auto px-4 md:px-6 py-8 md:py-20 relative z-10 text-center">
         {/* Interactive Portal Image */}

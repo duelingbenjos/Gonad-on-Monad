@@ -2,6 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Vignette System - Fine-grained control over masking effects */
+@layer utilities {
+  /* Base vignette class */
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  
+  /* Vignette positions */
+  .vignette-top {
+    background: radial-gradient(
+      ellipse 120% 80% at 50% 0%,
+      transparent 20%,
+      transparent 15%,
+      hsl(var(--background) / 0.3) 40%,
+      hsl(var(--background) / 0.7) 70%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  .vignette-center {
+    background: radial-gradient(
+      ellipse 80% 60% at 50% 50%,
+      transparent 0%,
+      transparent 20%,
+      hsl(var(--background) / 0.3) 50%,
+      hsl(var(--background) / 0.8) 80%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  .vignette-bottom {
+    background: radial-gradient(
+      ellipse 120% 80% at 50% 100%,
+      transparent 0%,
+      transparent 15%,
+      hsl(var(--background) / 0.3) 40%,
+      hsl(var(--background) / 0.7) 70%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  /* Intensity variants */
+  .vignette-subtle {
+    opacity: 1;
+  }
+  
+  .vignette-medium {
+    opacity: 0.8;
+  }
+  
+  .vignette-strong {
+    opacity: 1;
+  }
+  
+  /* Size variants */
+  .vignette-tight {
+    background: radial-gradient(
+      ellipse 60% 40% at 50% 0%,
+      transparent 0%,
+      transparent 10%,
+      hsl(var(--background) / 0.4) 30%,
+      hsl(var(--background) / 0.8) 60%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  .vignette-wide {
+    background: radial-gradient(
+      ellipse 150% 100% at 50% 0%,
+      transparent 0%,
+      transparent 20%,
+      hsl(var(--background) / 0.2) 50%,
+      hsl(var(--background) / 0.6) 80%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  /* Custom accent-based vignettes */
+  .vignette-accent-top {
+    background: radial-gradient(
+      ellipse 120% 80% at 50% 0%,
+      hsl(var(--accent) / 0.03) 0%,
+      transparent 15%,
+      hsl(var(--background) / 0.3) 40%,
+      hsl(var(--background) / 0.7) 70%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  .vignette-primary-glow {
+    background: radial-gradient(
+      ellipse 100% 70% at 50% 20%,
+      hsl(var(--primary) / 0.05) 0%,
+      hsl(var(--primary) / 0.02) 20%,
+      transparent 30%,
+      hsl(var(--background) / 0.4) 60%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  /* Blend mode variants */
+  .vignette-multiply {
+    mix-blend-mode: multiply;
+  }
+  
+  .vignette-overlay {
+    mix-blend-mode: overlay;
+  }
+  
+  .vignette-soft-light {
+    mix-blend-mode: soft-light;
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
