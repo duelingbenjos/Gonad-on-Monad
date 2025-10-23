@@ -15,8 +15,13 @@ export default {
     fontFamily: {
       sans: ["Medodica", "ui-sans-serif", "system-ui", "sans-serif"],
       medodica: ["Medodica", "ui-sans-serif", "system-ui", "sans-serif"],
+      oswald: ["var(--font-oswald)", "sans-serif"],
+      cormorant: ["var(--font-cormorant)", "serif"],
     },
     extend: {
+      screens: {
+        'xs': '480px',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -99,5 +104,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/line-clamp")],
 } satisfies Config;

@@ -1,40 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '@/lib/db';
 import { verifyMessage } from 'viem';
+import { verify } from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { address, message, signature } = body;
+    
+    let verifiedAddress: string;
+    let authMethod: string;
 
-    // Validate required fields
-    if (!address || !message || !signature) {
-      return NextResponse.json(
-        { error: 'Missing required fields: address, message, signature' },
-        { status: 400 }
-      );
-    }
+    // Check for JWT authentication first
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      
+      try {
+        const decoded = verify(token, JWT_SECRET) as any;
+        verifiedAddress = decoded.address;
+        authMethod = 'jwt';
+        
+        // Ensure the address in the body matches the JWT
+        if (address && address.toLowerCase() !== verifiedAddress.toLowerCase()) {
+          return NextResponse.json(
+            { error: 'Address mismatch between request and JWT token' },
+            { status: 400 }
+          );
+        }
+      } catch (jwtError) {
+        return NextResponse.json(
+          { error: 'Invalid or expired JWT token' },
+          { status: 401 }
+        );
+      }
+    } else {
+      // Fall back to signature-based authentication (legacy)
+      if (!address || !message || !signature) {
+        return NextResponse.json(
+          { error: 'Missing required fields: address, message, signature or Authorization header' },
+          { status: 400 }
+        );
+      }
 
-    // Verify the signature
-    const isValidSignature = await verifyMessage({
-      address: address as `0x${string}`,
-      message,
-      signature: signature as `0x${string}`,
-    });
+      // Verify the signature
+      const isValidSignature = await verifyMessage({
+        address: address as `0x${string}`,
+        message,
+        signature: signature as `0x${string}`,
+      });
 
-    if (!isValidSignature) {
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 400 }
-      );
-    }
+      if (!isValidSignature) {
+        return NextResponse.json(
+          { error: 'Invalid signature' },
+          { status: 400 }
+        );
+      }
 
-    // Check if message contains expected whitelist content
-    if (!message.includes('Gonad on Monad whitelist confirmation')) {
-      return NextResponse.json(
-        { error: 'Invalid message content' },
-        { status: 400 }
-      );
+      // Check if message contains expected whitelist content
+      if (!message.includes('Gonad on Monad whitelist confirmation')) {
+        return NextResponse.json(
+          { error: 'Invalid message content' },
+          { status: 400 }
+        );
+      }
+      
+      verifiedAddress = address;
+      authMethod = 'signature';
     }
 
     // Get client metadata
@@ -46,11 +80,11 @@ export async function POST(request: NextRequest) {
 
     // Add to whitelist
     const whitelistEntry = await DatabaseService.addToWhitelist(
-      address,
+      verifiedAddress,
       'gonad', // collection name
       {
-        message,
-        signature,
+        message: message || `JWT Authentication - ${authMethod}`,
+        signature: signature || `JWT:${authMethod}`,
         ipAddress,
         userAgent,
       }
@@ -60,9 +94,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Successfully added to whitelist',
       data: {
-        address,
+        address: verifiedAddress,
         tier: whitelistEntry.tier,
         timestamp: whitelistEntry.createdAt,
+        authMethod,
       },
     });
 

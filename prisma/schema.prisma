@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,135 +7,100 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Core user table - wallet address is the primary identifier
 model User {
-  id        String   @id @default(cuid())
-  address   String   @unique @map("wallet_address") // 0x... wallet address
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // User metadata
-  ens       String? // ENS name if available
-  avatar    String? // Profile picture URL
-  email     String? // Optional email
-  twitter   String? // Optional Twitter handle
-  discord   String? // Optional Discord handle
-
-  // Relations
-  whitelistEntries WhitelistEntry[]
-  signatures       Signature[]
-  sessions         Session[]
+  id               String           @id @default(cuid())
+  address          String           @unique @map("wallet_address")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  ens              String?
+  avatar           String?
+  email            String?
+  twitter          String?
+  discord          String?
   mintRecords      MintRecord[]
+  sessions         Session[]
+  signatures       Signature[]
+  whitelistEntries WhitelistEntry[]
 
   @@map("users")
 }
 
-// Whitelist entries for different collections
 model WhitelistEntry {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  collectionId String   @map("collection_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  
-  // Whitelist metadata
-  signatureId  String?  @map("signature_id") // Link to the signature that got them whitelisted
-  source       String?  // How they got whitelisted: "signature", "manual", "airdrop", etc.
-  tier         String   @default("standard") // "og", "standard", "public" for different tiers
-  
-  // Relations
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  signature  Signature? @relation(fields: [signatureId], references: [id])
+  id           String     @id @default(cuid())
+  userId       String     @map("user_id")
+  collectionId String     @map("collection_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  signatureId  String?    @map("signature_id")
+  source       String?
+  tier         String     @default("standard")
+  signature    Signature? @relation(fields: [signatureId], references: [id])
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // One whitelist entry per user per collection
   @@unique([userId, collectionId])
   @@map("whitelist_entries")
 }
 
-// NFT Collections (Gonad, future collections)
 model Collection {
-  id          String   @id @default(cuid())
-  name        String   @unique // "gonad", "gonad-2", etc.
-  displayName String   @map("display_name") // "Gonad on Monad"
-  description String?
-  
-  // Collection metadata
-  maxSupply     Int?     @map("max_supply")
-  mintPrice     String?  @map("mint_price") // Store as string to handle decimals
-  mintStart     DateTime? @map("mint_start")
-  mintEnd       DateTime? @map("mint_end")
-  whitelistOnly Boolean  @default(true) @map("whitelist_only")
-  
-  // Collection state
-  isActive    Boolean @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  whitelistEntries WhitelistEntry[]
+  id               String           @id @default(cuid())
+  name             String           @unique
+  displayName      String           @map("display_name")
+  description      String?
+  maxSupply        Int?             @map("max_supply")
+  mintPrice        String?          @map("mint_price")
+  mintStart        DateTime?        @map("mint_start")
+  mintEnd          DateTime?        @map("mint_end")
+  whitelistOnly    Boolean          @default(true) @map("whitelist_only")
+  isActive         Boolean          @default(true) @map("is_active")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
   mintRecords      MintRecord[]
+  whitelistEntries WhitelistEntry[]
 
   @@map("collections")
 }
 
-// Track all signatures for security/audit
 model Signature {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  message   String   // The message that was signed
-  signature String   // The actual signature
-  createdAt DateTime @default(now()) @map("created_at")
-  
-  // Signature metadata
-  purpose   String   // "whitelist", "login", "transaction", etc.
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  
-  // Relations
+  id               String           @id @default(cuid())
+  userId           String           @map("user_id")
+  message          String
+  signature        String
+  createdAt        DateTime         @default(now()) @map("created_at")
+  purpose          String
+  ipAddress        String?          @map("ip_address")
+  userAgent        String?          @map("user_agent")
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   whitelistEntries WhitelistEntry[]
 
   @@map("signatures")
 }
 
-// Wallet-based login sessions
 model Session {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
-  token     String   @unique // JWT or session token
+  token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-  
-  // Session metadata
-  ipAddress String? @map("ip_address")
-  userAgent String? @map("user_agent")
-  isActive  Boolean @default(true) @map("is_active")
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  isActive  Boolean  @default(true) @map("is_active")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
-// Track minting activity (future expansion)
 model MintRecord {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  collectionId String   @map("collection_id")
-  
-  // Mint details
-  tokenId      String?  @map("token_id") // NFT token ID
-  txHash       String?  @map("tx_hash") // Transaction hash
-  amount       Int      @default(1) // Number of NFTs minted
-  price        String?  // Price paid
-  
-  // Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  mintedAt  DateTime? @map("minted_at") // When actually minted on chain
-  
-  // Relations
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  userId       String     @map("user_id")
+  collectionId String     @map("collection_id")
+  tokenId      String?    @map("token_id")
+  txHash       String?    @map("tx_hash")
+  amount       Int        @default(1)
+  price        String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+  mintedAt     DateTime?  @map("minted_at")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("mint_records")
 }

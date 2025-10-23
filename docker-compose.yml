@@ -8,18 +8,17 @@ services:
     container_name: gonad-nft-app
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
+      # Override .env values for production
       - NODE_ENV=production
-      - DATABASE_URL=file:./data/production.db
-      - NEXT_PUBLIC_WC_PROJECT_ID=${NEXT_PUBLIC_WC_PROJECT_ID:-gonad-demo-project-id}
-      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret-change-this-too}
+      - DATABASE_URL=file:/app/data/production.db
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
     volumes:
       # Database volume - persist SQLite database on host
       - ./data:/app/data
-      # Build artifacts volume - access build from host
-      - ./.next:/app/.next
       # Optional: Mount entire app for development
       # - .:/app
       # - /app/node_modules
@@ -39,13 +38,16 @@ services:
     container_name: gonad-nft-dev
     ports:
       - "3001:3000"
+    env_file:
+      - .env
     environment:
+      # Override .env values for development
       - NODE_ENV=development
       - DATABASE_URL=file:./data/dev.db
-      - NEXT_PUBLIC_WC_PROJECT_ID=${NEXT_PUBLIC_WC_PROJECT_ID:-gonad-demo-project-id}
-      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3001}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-nextauth-secret}
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - WATCHPACK_POLLING=true
+      - NEXT_TELEMETRY_DISABLED=1
     volumes:
       # Mount entire source code for development
       - .:/app

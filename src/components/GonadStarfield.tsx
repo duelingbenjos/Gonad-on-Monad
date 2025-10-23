@@ -256,11 +256,11 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
       hasLasersFired.current = false;
       
       // Add some new dickbutts
-      const newDickbuttCount = 30 + Math.random() * 20; // Increased from 15+10 to 30+20
+      const newDickbuttCount = 30 + Math.random() * 40; // Increased from 15+10 to 30+20
       for (let i = 0; i < newDickbuttCount; i++) {
         createParticle();
       }
-    }, 10000); // 5 seconds after victory texts finish (victory texts last 5 seconds, so 10s total)
+    }, 10000);
   };
 
   // Create a single particle
@@ -271,11 +271,12 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     const particle: Particle = {
       x: Math.random() * canvas.width - canvas.width / 2,
       y: Math.random() * canvas.height - canvas.height / 2,
-      z: Math.random() * 1000 + 100, // Start far away
+      z: Math.random() * 1000 + 500, // Start far away
       image: imagesRef.current[Math.floor(Math.random() * imagesRef.current.length)],
       speed: Math.random() * 2 + 0.5,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.02,
+      opacity: 0, // Start invisible for fade-in effect
     };
 
     particlesRef.current.push(particle);
@@ -283,11 +284,16 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
 
   // Initialize particles
   const initParticles = () => {
-    const particleCount = 100; // Increased from 50 to 100 for more dickbutts
+    const particleCount = 70; // Increased from 50 to 100 for more dickbutts
     particlesRef.current = [];
 
     for (let i = 0; i < particleCount; i++) {
       createParticle();
+      // For initial particles, start with a random fade-in progress to stagger the effect
+      if (particlesRef.current.length > 0) {
+        const lastParticle = particlesRef.current[particlesRef.current.length - 1];
+        lastParticle.opacity = Math.random() * 0.3; // Start with 0-30% opacity for variety
+      }
     }
   };
 
@@ -391,6 +397,11 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         particle.z -= particle.speed;
         particle.rotation += particle.rotationSpeed;
 
+        // Fade-in effect for new particles
+        if (particle.opacity !== undefined && particle.opacity < 1) {
+          particle.opacity = Math.min(particle.opacity + 0.02, 1); // Fade in over ~50 frames (about 0.83 seconds)
+        }
+
         // Reset particle if it gets too close
         if (particle.z <= 1) {
             particlesRef.current.splice(i, 1);
@@ -407,7 +418,11 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         const screenX = (particle.x / particle.z) * 300 + canvas.width / 2;
         const screenY = (particle.y / particle.z) * 300 + canvas.height / 2 - 250;
         const size = Math.max(scale * 120, 8);
-        const opacity = Math.min(scale * 2, 0.8);
+        
+        // Combine distance-based opacity with fade-in effect
+        const distanceOpacity = Math.min(scale * 2, 0.8);
+        const fadeInOpacity = particle.opacity !== undefined ? particle.opacity : 1;
+        const opacity = distanceOpacity * fadeInOpacity;
 
         // Skip if particle is off-screen
         if (screenX < -200 || screenX > canvas.width + 200 || 

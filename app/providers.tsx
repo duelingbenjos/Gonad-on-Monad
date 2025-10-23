@@ -14,6 +14,7 @@ import {
 } from '@rainbow-me/rainbowkit/wallets';
 import { mainnet, polygon, optimism, arbitrum, base } from 'wagmi/chains';
 import { WalletProvider } from '@/contexts/WalletContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID || 'gonad-demo-project-id';
@@ -67,7 +68,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           }}
         >
           <WalletProvider>
-            {children}
+            <AuthProvider>
+              {children}
+            </AuthProvider>
           </WalletProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
