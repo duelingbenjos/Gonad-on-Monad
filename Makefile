@@ -57,7 +57,7 @@ shell:		## Open shell inside the container
 
 health:		## Check application health
 	@echo "🔍 Checking application health..."
-	@curl -f http://localhost:3000/api/health && echo "✅ Application is healthy"
+	@curl -f http://localhost:3001/api/health && echo "✅ Application is healthy"
 
 status:		## Show container status
 	docker-compose ps
