@@ -24,6 +24,7 @@ interface Laser {
   color: string;
   width: number;
   targetParticle?: Particle;
+  lockFrames?: number; // frames to show crosshair before registering hit
 }
 
 interface Fragment {
@@ -39,6 +40,10 @@ interface Fragment {
 
 export interface GonadStarfieldRef {
   explode: () => void;
+}
+
+export interface GonadStarfieldProps {
+  onTargetDestroyed?: (delta: number) => void;
 }
 
 interface GameState {
@@ -68,7 +73,7 @@ interface VictoryText {
   size: number;
 }
 
-export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
+export const GonadStarfield = forwardRef<GonadStarfieldRef, GonadStarfieldProps>((props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const imagesRef = useRef<HTMLImageElement[]>([]);
@@ -77,6 +82,8 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
   const fragmentsRef = useRef<Fragment[]>([]);
   const hitTextsRef = useRef<HitText[]>([]);
   const victoryTextsRef = useRef<VictoryText[]>([]);
+  const crosshairTargetsRef = useRef<Particle[]>([]);
+  const crosshairUpdateCountdownRef = useRef<number>(0);
   const animationIdRef = useRef<number>();
   const explosionSounds = useRef<HTMLAudioElement[]>([]);
   const hasLasersFired = useRef(false);
@@ -142,6 +149,8 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2 - 150; // 15% higher than before (was -100, now -150)
     
+    // Prefer current crosshair targets when available
+    const crosshairTargets = crosshairTargetsRef.current.filter(Boolean);
     // Get all available dickbutt particles (non-GONAD particles) from starfield
     const dickbutts = particlesRef.current.filter(p => 
       p.image !== gonadImageRef.current && 
@@ -150,13 +159,28 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     
     const colors = ['#FF0040', '#00FF40', '#4000FF', '#FF4000', '#40FF00', '#FF0080', '#80FF00', '#0080FF'];
     
-    // Target up to 5 random dickbutts, or all available if less than 5
+    // Target up to 5 particles, preferring locked crosshair targets
     const targetCount = Math.min(5, dickbutts.length);
-    const shuffledDickbutts = [...dickbutts].sort(() => Math.random() - 0.5); // Shuffle array
-    
-    // Create targeting lasers for randomly selected dickbutts
-    for (let i = 0; i < targetCount; i++) {
-      const targetParticle = shuffledDickbutts[i];
+    const selected: Particle[] = [];
+    for (let i = 0; i < crosshairTargets.length && selected.length < targetCount; i++) {
+      const t = crosshairTargets[i];
+      if (t && dickbutts.includes(t)) selected.push(t);
+    }
+    if (selected.length < targetCount) {
+      const picked = new Set<number>();
+      while (selected.length < targetCount) {
+        const idx = Math.floor(Math.random() * dickbutts.length);
+        if (!picked.has(idx)) {
+          picked.add(idx);
+          const cand = dickbutts[idx];
+          if (cand && !selected.includes(cand)) selected.push(cand);
+        }
+      }
+    }
+
+    // Create targeting lasers for selected dickbutts
+    for (let i = 0; i < selected.length; i++) {
+      const targetParticle = selected[i];
       if (!targetParticle) continue;
       
       // Calculate target screen position using NORMAL starfield coordinates
@@ -173,6 +197,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         color: colors[Math.floor(Math.random() * colors.length)],
         width: Math.random() * 12 + 10, // Much thicker (was 8+6, now 12+10)
         targetParticle: targetParticle,
+        lockFrames: 18 + Math.floor(Math.random() * 18), // 18-36 frames (~0.3-0.6s)
       };
       
       lasersRef.current.push(laser);
@@ -204,7 +229,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
   };
 
   const createHitText = (x: number, y: number) => {
-    const hitWords = ['BANG!', 'SMASH!', 'BOOM!', 'POW!', 'ZAP!', 'WHAM!', 'BLAM!', 'CRASH!'];
+    const hitWords = ['BANG!', 'SMASH!', 'BOOM!', 'POW!', 'ZAP!', 'WHAM!', 'BLAM!', 'CRASH!', 'CUM!', 'THIQQ'];
     const word = hitWords[Math.floor(Math.random() * hitWords.length)];
     const colors = ['#FF0040', '#00FF40', '#4000FF', '#FF4000', '#FFFF00', '#FF0080', '#80FF00'];
     
@@ -336,8 +361,13 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true } as any) as CanvasRenderingContext2D | null;
     if (!ctx) return;
+
+    // Prefer cheaper filtering during motion
+    ctx.imageSmoothingEnabled = true;
+    // Low quality is visually fine at motion and cheaper
+    (ctx as any).imageSmoothingQuality = 'low';
 
     // Set canvas size
     const resizeCanvas = () => {
@@ -345,8 +375,26 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
       canvas.height = window.innerHeight;
     };
 
+    // Debounce resize to next animation frame
+    let resizeRaf: number | null = null;
+    const onResize = () => {
+      if (resizeRaf !== null) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        resizeCanvas();
+        resizeRaf = null;
+      });
+    };
+
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', onResize);
+
+    // Resume animation when tab becomes visible
+    const onVisibilityChange = () => {
+      if (!document.hidden && !animationIdRef.current) {
+        animationIdRef.current = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Load images
     const loadImages = async () => {
@@ -377,12 +425,109 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
       }
     };
 
+    // Lightweight crosshair renderer (fixed-size, equal protrusion, small center gap)
+    const drawCrosshair = (x: number, y: number, _baseSize: number, color: string) => {
+      const radius = 14;           // fixed circle radius in px
+      const protrusion = 6;        // how far lines extend outside the circle
+      const centerGap = 4;         // gap around the center so target remains visible
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.95;
+
+      // Outer circle
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Horizontal arms (equal protrusion each side, gap at center)
+      ctx.beginPath();
+      // left arm
+      ctx.moveTo(x - (radius + protrusion), y);
+      ctx.lineTo(x - centerGap * 0.5, y);
+      // right arm
+      ctx.moveTo(x + centerGap * 0.5, y);
+      ctx.lineTo(x + (radius + protrusion), y);
+      ctx.stroke();
+
+      // Vertical arms
+      ctx.beginPath();
+      // top arm
+      ctx.moveTo(x, y - (radius + protrusion));
+      ctx.lineTo(x, y - centerGap * 0.5);
+      // bottom arm
+      ctx.moveTo(x, y + centerGap * 0.5);
+      ctx.lineTo(x, y + (radius + protrusion));
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    const projectParticle = (p: Particle) => {
+      const screenX = (p.x / p.z) * 300 + canvas.width / 2;
+      const screenY = (p.y / p.z) * 300 + canvas.height / 2 - 250;
+      const scale = (1000 - p.z) / 1000;
+      const size = Math.max(scale * 120, 8);
+      return { screenX, screenY, size };
+    };
+
+    const isOnScreen = (p: Particle) => {
+      const { screenX, screenY } = projectParticle(p);
+      return !(screenX < -200 || screenX > canvas.width + 200 || screenY < -200 || screenY > canvas.height + 200);
+    };
+
+    const desiredCrosshairCount = 5;
+
+    const updateCrosshairTargets = () => {
+      if (!document.documentElement.classList.contains('game')) {
+        crosshairTargetsRef.current = [];
+        return;
+      }
+      const candidates = particlesRef.current.filter(p => p.image !== gonadImageRef.current && p.z > 1 && isOnScreen(p));
+      if (candidates.length === 0) {
+        crosshairTargetsRef.current = [];
+        return;
+      }
+      const kept: Particle[] = [];
+      for (const t of crosshairTargetsRef.current) {
+        if (t && candidates.includes(t)) kept.push(t);
+        if (kept.length >= desiredCrosshairCount) break;
+      }
+      if (kept.length < desiredCrosshairCount) {
+        const remaining = desiredCrosshairCount - kept.length;
+        const picked = new Set<number>();
+        while (picked.size < Math.min(remaining, candidates.length)) {
+          const idx = Math.floor(Math.random() * candidates.length);
+          if (!picked.has(idx)) {
+            picked.add(idx);
+            const cand = candidates[idx];
+            if (!kept.includes(cand)) kept.push(cand);
+            if (kept.length >= desiredCrosshairCount) break;
+          }
+        }
+      }
+      crosshairTargetsRef.current = kept;
+    };
+
     // Animation loop
     const animate = () => {
       const now = Date.now();
       
       // Simple clear (no heavy flashing)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update crosshair targets periodically in game mode
+      if (document.documentElement.classList.contains('game')) {
+        if (crosshairUpdateCountdownRef.current <= 0) {
+          updateCrosshairTargets();
+          crosshairUpdateCountdownRef.current = 12; // ~5 updates/sec at 60fps
+        } else {
+          crosshairUpdateCountdownRef.current--;
+        }
+      } else if (crosshairTargetsRef.current.length) {
+        crosshairTargetsRef.current = [];
+      }
 
       // Clean up old lasers and fragments periodically
       if (lasersRef.current.length === 0 && fragmentsRef.current.length === 0) {
@@ -430,12 +575,11 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
           continue;
         }
 
-        // Draw particle (no heavy glow effects)
-        ctx.save();
+        // Draw particle using setTransform (cheaper than save/restore + translate/rotate)
+        const cos = Math.cos(particle.rotation);
+        const sin = Math.sin(particle.rotation);
+        ctx.setTransform(cos, sin, -sin, cos, screenX, screenY);
         ctx.globalAlpha = opacity;
-        ctx.translate(screenX, screenY);
-        ctx.rotate(particle.rotation);
-        
         ctx.drawImage(
           particle.image,
           -size / 2,
@@ -443,7 +587,9 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
           size,
           size
         );
-        ctx.restore();
+        // Reset transform and alpha
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
       }
 
       // Hit detection and laser updates
@@ -452,8 +598,26 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         
         laser.life--;
         
-        // Check for hits with target particle (during most of laser life)
+        // If in game mode, draw crosshair over current target position
+        if (laser.targetParticle && document.documentElement.classList.contains('game')) {
+          const p = laser.targetParticle;
+          // Project current position like the starfield sprites
+          const screenX = (p.x / p.z) * 300 + canvas.width / 2;
+          const screenY = (p.y / p.z) * 300 + canvas.height / 2 - 250;
+          const scale = (1000 - p.z) / 1000;
+          const size = Math.max(scale * 120, 8);
+          // Skip if offscreen
+          if (!(screenX < -200 || screenX > canvas.width + 200 || screenY < -200 || screenY > canvas.height + 200)) {
+            drawCrosshair(screenX, screenY, size, '#FFD700');
+          }
+        }
+
+        // Check for hits with target particle (during most of laser life).
+        // Defer hit while lockFrames > 0 so crosshair is visible first.
         if (laser.targetParticle && laser.life > laser.maxLife * 0.1) {
+          if (typeof laser.lockFrames === 'number' && laser.lockFrames > 0) {
+            laser.lockFrames--;
+          } else {
           const targetIndex = particlesRef.current.indexOf(laser.targetParticle);
           if (targetIndex !== -1) {
             // Create fragments at hit location
@@ -464,10 +628,12 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
             particlesRef.current.splice(targetIndex, 1);
             // Mark laser as hit (don't remove immediately for visual effect)
             laser.targetParticle = undefined;
+            // HUD and API calls disabled for deployment
             // Reset clear message state if showing (new targets destroyed)
             if (gameState.current.showClearMessage) {
               gameState.current.showClearMessage = false;
             }
+          }
           }
         }
         
@@ -479,44 +645,36 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         
         const laserOpacity = Math.min(laser.life / laser.maxLife, 0.9);
         
+        // Simplified single-pass laser with gradient, no shadow blurs
         ctx.save();
-        
-        // Draw multiple layers for super visible lasers
-        // Outer glow layer
-        ctx.globalAlpha = laserOpacity * 0.3;
-        ctx.strokeStyle = laser.color;
-        ctx.shadowColor = laser.color;
-        ctx.shadowBlur = 30;
-        ctx.lineWidth = laser.width + 8;
-        ctx.lineCap = 'round';
-        
-        ctx.beginPath();
-        ctx.moveTo(laser.x1, laser.y1);
-        ctx.lineTo(laser.x2, laser.y2);
-        ctx.stroke();
-        
-        // Main laser beam
+        const grad = ctx.createLinearGradient(laser.x1, laser.y1, laser.x2, laser.y2);
+        grad.addColorStop(0.0, 'rgba(255,255,255,0.0)');
+        grad.addColorStop(0.15, '#FFFFFF');
+        grad.addColorStop(0.5, laser.color);
+        grad.addColorStop(0.85, '#FFFFFF');
+        grad.addColorStop(1.0, 'rgba(255,255,255,0.0)');
         ctx.globalAlpha = laserOpacity;
-        ctx.shadowBlur = 20;
-        ctx.lineWidth = laser.width;
-        
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = Math.max(2, laser.width * 0.85);
+        ctx.lineCap = 'round';
+        const prevComp = ctx.globalCompositeOperation;
+        ctx.globalCompositeOperation = 'lighter';
         ctx.beginPath();
         ctx.moveTo(laser.x1, laser.y1);
         ctx.lineTo(laser.x2, laser.y2);
         ctx.stroke();
-        
-        // Inner bright core
-        ctx.globalAlpha = laserOpacity * 1.2;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.shadowBlur = 10;
-        ctx.lineWidth = laser.width * 0.3;
-        
-        ctx.beginPath();
-        ctx.moveTo(laser.x1, laser.y1);
-        ctx.lineTo(laser.x2, laser.y2);
-        ctx.stroke();
-        
+        ctx.globalCompositeOperation = prevComp;
         ctx.restore();
+      }
+
+      // Always draw crosshairs for currently selected targets in game mode
+      if (document.documentElement.classList.contains('game') && crosshairTargetsRef.current.length) {
+        for (const t of crosshairTargetsRef.current) {
+          const { screenX, screenY, size } = projectParticle(t);
+          if (!(screenX < -200 || screenX > canvas.width + 200 || screenY < -200 || screenY > canvas.height + 200)) {
+            drawCrosshair(screenX, screenY, size, '#FFD700');
+          }
+        }
       }
 
       // Draw fragments
@@ -539,9 +697,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         ctx.save();
         ctx.globalAlpha = fragmentOpacity;
         ctx.fillStyle = fragment.color;
-        ctx.shadowColor = fragment.color;
-        ctx.shadowBlur = 8;
-        
+        // No shadow blur to reduce GPU cost
         ctx.beginPath();
         ctx.arc(fragment.x, fragment.y, fragment.size, 0, Math.PI * 2);
         ctx.fill();
@@ -586,9 +742,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 3; // Thicker stroke
         ctx.textAlign = 'center';
-        ctx.shadowColor = hitText.color;
-        ctx.shadowBlur = 15; // More shadow
-        
+        // Remove shadow blur to lighten rendering
         ctx.strokeText(hitText.text, hitText.x, hitText.y);
         ctx.fillText(hitText.text, hitText.x, hitText.y);
         ctx.restore();
@@ -619,9 +773,7 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         ctx.strokeStyle = '#FF4500';
         ctx.lineWidth = 4; // Thicker stroke
         ctx.textAlign = 'center';
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 25; // More glow
-        
+        // Reduced glow cost: no shadow blur
         ctx.strokeText('NICE JOB!', victoryText.x, victoryText.y);
         ctx.fillText('NICE JOB!', victoryText.x, victoryText.y);
         ctx.restore();
@@ -641,14 +793,21 @@ export const GonadStarfield = forwardRef<GonadStarfieldRef>((props, ref) => {
         createVictoryExplosion();
       }
 
-      animationIdRef.current = requestAnimationFrame(animate);
+      // Schedule next frame only when visible
+      if (!document.hidden) {
+        animationIdRef.current = requestAnimationFrame(animate);
+      } else {
+        animationIdRef.current = undefined;
+      }
     };
 
     loadImages();
     loadExplosionSounds();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (resizeRaf !== null) cancelAnimationFrame(resizeRaf);
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }

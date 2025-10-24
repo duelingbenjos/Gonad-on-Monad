@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WhitelistDialog } from "./WhitelistDialog";
 import { WalletStatus } from "./WalletStatus";
@@ -44,7 +45,7 @@ export const Header = () => {
         <nav className="container mx-auto flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
           <Link href="/" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
             <img src="/gonad.png" alt="GONAD Logo" className="h-8 w-8 md:h-11 md:w-11" />
-            <img src="/gonad-text.png" alt="GONAD" className="h-4 md:h-6" />
+            <img src="/gonad-text.png" alt="GONAD" className="h-4 md:h-6 dark:invert" />
           </Link>
           
           {/* Desktop Navigation - Hidden on mobile */}
@@ -57,10 +58,25 @@ export const Header = () => {
             </Link>
           </div>
           
-          {/* Desktop Wallet & Social Icons - Hidden on mobile */}
+          {/* Desktop Wallet, Social Icons, Theme Toggle - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-4 scale-90 md:scale-100">
             <WalletStatus variant="header" />
             <SocialIcons className="justify-center" />
+            {/* Theme toggle (icon) */}
+            <button
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-border/50 bg-secondary/40 backdrop-blur-sm hover:bg-secondary/60 transition-colors text-foreground"
+              onClick={() => {
+                const html = document.documentElement;
+                const isDark = html.classList.toggle('dark');
+                try { localStorage.setItem('gonad-game-mode', isDark ? '1' : '0'); } catch {}
+              }}
+              aria-label="Toggle theme"
+              title="Toggle theme"
+            >
+              {/* Show moon in light (to switch to dark), sun in dark (to switch to light) */}
+              <Moon className="h-5 w-5 dark:hidden" />
+              <Sun className="h-5 w-5 hidden dark:inline" />
+            </button>
           </div>
           
           {/* Mobile Burger Menu Button */}

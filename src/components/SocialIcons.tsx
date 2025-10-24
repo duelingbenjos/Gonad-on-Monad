@@ -32,13 +32,14 @@ export const SocialIcons: React.FC<SocialIconsProps> = ({ className = "" }) => {
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-muted-foreground p-2 hover:bg-accent rounded-md"
+          className="group p-2 rounded-md transition-colors hover:bg-primary"
           aria-label={`Follow us on ${link.name}`}
         >
-          <img 
+          {/* Light: black; Dark: white; Hover: black on yellow bg */}
+          <img
             src={link.icon}
             alt={link.name}
-            className="w-5 h-5"
+            className="w-5 h-5 dark:invert group-hover:invert-0"
           />
         </a>
       ))}

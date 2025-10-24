@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${oswald.variable} ${cormorantGaramond.variable}`}>
+    <html lang="en" className={`${oswald.variable} ${cormorantGaramond.variable} dark game`}>
       <body className="font-medodica">
         <Providers>
           <TooltipProvider>
